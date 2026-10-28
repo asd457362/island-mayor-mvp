@@ -1,5 +1,11 @@
 import * as T from "three";
 import { citizens, issues } from "./data";
+import {
+  createResident,
+  animateResident,
+  buildingDetails,
+  streetDetails,
+} from "./models";
 import type { State } from "./game";
 export class CameraController {
   mode: "city" | "walk" = "city";
@@ -96,6 +102,7 @@ export class WorldManager {
         ["#edc274", "#8eb3b7", "#ec927c"][i % 3],
       );
     }
+    this.scene.add(streetDetails());
     issues.forEach((i, index) => {
       const m = new T.Mesh(
         new T.OctahedronGeometry(0.65),
@@ -122,6 +129,8 @@ export class WorldManager {
     citizens.forEach((c) => {
       const p = this.person(
         ["#e59b83", "#8fb9b2", "#d6b56e", "#b09dc5"][c.id % 4],
+        false,
+        c.id,
       );
       p.position.set(c.x, 0.5, c.z);
       p.userData.id = c.id;
@@ -226,6 +235,7 @@ export class WorldManager {
       this.box(x + i, h * 0.6, z + d / 2 + 0.03, 0.8, 1, 0.08, "#709eab", g);
     }
     this.box(x, 1.5, z + d / 2 + 0.1, 1.4, 2, 0.2, "#536f6e", g);
+    this.scene.add(buildingDetails(x, z, w, d, h, name));
     this.colliders.push({ x, z, w: w + 1, d: d + 1 });
     this.label(name, x, h + 2, z);
   }
@@ -259,14 +269,8 @@ export class WorldManager {
     m.castShadow = true;
     this.scene.add(m);
   }
-  person(color: string, player = false) {
-    const g = new T.Group();
-    this.box(0, 0.9, 0, 0.65, 0.85, 0.45, color, g);
-    this.box(0, 1.65, 0, 0.57, 0.57, 0.55, "#f3d5b0", g);
-    this.box(0, 1.98, 0, 0.65, 0.17, 0.6, player ? "#f2c66c" : "#665950", g);
-    this.box(-0.2, 0.3, 0, 0.22, 0.6, 0.25, "#456879", g);
-    this.box(0.2, 0.3, 0, 0.22, 0.6, 0.25, "#456879", g);
-    return g;
+  person(color: string, player = false, variant = 0) {
+    return createResident(color, player, variant);
   }
   resize() {
     this.camera.aspect = innerWidth / innerHeight;
@@ -341,13 +345,13 @@ export class WorldManager {
         p.position.z = T.MathUtils.clamp(nz, -26, 26);
       }
       this.avatar.rotation.y = Math.atan2(dx, dz) + angle;
-      this.avatar.children
-        .slice(3)
-        .forEach(
-          (leg, index) =>
-            (leg.rotation.x = Math.sin(time * 12 + index * Math.PI) * 0.4),
-        );
     }
+    animateResident(
+      this.avatar,
+      time,
+      this.controls.mode === "walk" && moving,
+      12,
+    );
     this.avatar.position.copy(p.position);
     this.avatar.position.y =
       0.5 +
@@ -359,7 +363,8 @@ export class WorldManager {
       const c = citizens[j];
       npc.position.x = c.x + Math.sin(time * 0.25 + j) * 1.5;
       npc.position.z = c.z + Math.cos(time * 0.25 + j) * 1.5;
-      npc.rotation.y = time * 0.25 + j;
+      npc.rotation.y = Math.PI / 2 + time * 0.25 + j;
+      animateResident(npc, time + j, true, 4);
     });
     this.markers.forEach((m, i) => {
       m.rotation.y = time;
