@@ -1,14 +1,137 @@
-export type Group = '青年'|'家長'|'商家'|'長者';
-export const groups: Group[]=['青年','家長','商家','長者'];
-export const issues=[
- {id:'park',name:'公園遊具老舊',place:'曦光公園',x:-14,z:-13,group:'家長',color:'#e9b35d'},
- {id:'parking',name:'市場周邊違停',place:'幸福市場',x:14,z:-12,group:'商家',color:'#ef8972'},
- {id:'light',name:'巷弄路燈故障',place:'青葉巷',x:-15,z:10,group:'長者',color:'#ffd66b'},
- {id:'noise',name:'夜間噪音',place:'街角商店',x:15,z:9,group:'青年',color:'#ba9ee8'},
- {id:'drain',name:'社區排水不良',place:'幸福小學',x:0,z:19,group:'家長',color:'#79c7d9'}
+export type Group = "青年" | "家長" | "商家" | "長者";
+export const groups: Group[] = ["青年", "家長", "商家", "長者"];
+export const issues = [
+  {
+    id: "park",
+    name: "公園遊具老舊",
+    place: "曦光公園",
+    x: -14,
+    z: -13,
+    group: "家長",
+    color: "#e9b35d",
+  },
+  {
+    id: "parking",
+    name: "市場周邊違停",
+    place: "幸福市場",
+    x: 14,
+    z: -12,
+    group: "商家",
+    color: "#ef8972",
+  },
+  {
+    id: "light",
+    name: "巷弄路燈故障",
+    place: "青葉巷",
+    x: -15,
+    z: 10,
+    group: "長者",
+    color: "#ffd66b",
+  },
+  {
+    id: "noise",
+    name: "夜間噪音",
+    place: "街角商店",
+    x: 15,
+    z: 9,
+    group: "青年",
+    color: "#ba9ee8",
+  },
+  {
+    id: "drain",
+    name: "社區排水不良",
+    place: "幸福小學",
+    x: 0,
+    z: 19,
+    group: "家長",
+    color: "#79c7d9",
+  },
 ];
-export const tiers=[{name:'局部改善',cost:16000,days:3,effect:6,risk:0.1,material:4000,staff:2000,maintenance:80},{name:'標準翻新',cost:30000,days:5,effect:12,risk:0.15,material:9000,staff:4000,maintenance:120},{name:'全面重建',cost:55000,days:8,effect:18,risk:0.25,material:18000,staff:7000,maintenance:200}];
-export const stages=['規劃','預算編列','人事安排','核准或補助','施工','驗收','成效評估','已完成'];
-export const roles=[{name:'里長',xp:0},{name:'區長',xp:300},{name:'市長',xp:1200},{name:'總統',xp:5000}];
-export const citizenNames=['林小晴','陳阿明','黃美玲','張建國','李子安','吳春花','劉俊宏','蔡雅婷','楊志成','許秀英','鄭宇軒','謝佳蓉','郭文雄','洪心怡','邱家豪','曾淑芬','廖柏翰','賴麗華','周俊傑','徐惠真','葉品妤','王大同','蘇怡君','莊明德'];
-export const citizens=citizenNames.map((name,i)=>({id:i,name,age:22+i*2,job:['設計師','教師','店主','退休'][i%4],home:`幸福里 ${i+1} 號`,income:['中','中','高','低'][i%4],group:groups[i%4],support:38+i%12,trust:40+i%15,turnout:65+i%20,x:Math.cos(i*2.4)*(8+i%3*5),z:Math.sin(i*2.4)*(8+i%4*4)}));
+export const tiers = [
+  {
+    name: "局部改善",
+    cost: 16000,
+    days: 3,
+    effect: 6,
+    risk: 0.1,
+    material: 4000,
+    staff: 2000,
+    maintenance: 80,
+  },
+  {
+    name: "標準翻新",
+    cost: 30000,
+    days: 5,
+    effect: 12,
+    risk: 0.15,
+    material: 9000,
+    staff: 4000,
+    maintenance: 120,
+  },
+  {
+    name: "全面重建",
+    cost: 55000,
+    days: 8,
+    effect: 18,
+    risk: 0.25,
+    material: 18000,
+    staff: 7000,
+    maintenance: 200,
+  },
+];
+export const stages = [
+  "規劃",
+  "預算編列",
+  "人事安排",
+  "核准或補助",
+  "施工",
+  "驗收",
+  "成效評估",
+  "已完成",
+];
+export const roles = [
+  { name: "里長", xp: 0 },
+  { name: "區長", xp: 300 },
+  { name: "市長", xp: 1200 },
+  { name: "總統", xp: 5000 },
+];
+export const citizenNames = [
+  "林小晴",
+  "陳阿明",
+  "黃美玲",
+  "張建國",
+  "李子安",
+  "吳春花",
+  "劉俊宏",
+  "蔡雅婷",
+  "楊志成",
+  "許秀英",
+  "鄭宇軒",
+  "謝佳蓉",
+  "郭文雄",
+  "洪心怡",
+  "邱家豪",
+  "曾淑芬",
+  "廖柏翰",
+  "賴麗華",
+  "周俊傑",
+  "徐惠真",
+  "葉品妤",
+  "王大同",
+  "蘇怡君",
+  "莊明德",
+];
+export const citizens = citizenNames.map((name, i) => ({
+  id: i,
+  name,
+  age: 22 + i * 2,
+  job: ["設計師", "教師", "店主", "退休"][i % 4],
+  home: `幸福里 ${i + 1} 號`,
+  income: ["中", "中", "高", "低"][i % 4],
+  group: groups[i % 4],
+  support: 38 + (i % 12),
+  trust: 40 + (i % 15),
+  turnout: 65 + (i % 20),
+  x: Math.cos(i * 2.4) * (8 + (i % 3) * 5),
+  z: Math.sin(i * 2.4) * (8 + (i % 4) * 4),
+}));
