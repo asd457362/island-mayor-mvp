@@ -1,3 +1,4 @@
+import { createLandscape } from "./landscape";
 import * as T from "three";
 import { citizens, issues } from "./data";
 import {
@@ -139,7 +140,11 @@ export class WorldManager {
     });
     window.addEventListener("resize", () => this.resize());
     window.addEventListener("keydown", (e) => {
-      if (["INPUT", "SELECT"].includes((e.target as HTMLElement).tagName))
+      if (
+        ["INPUT", "SELECT", "TEXTAREA"].includes(
+          (e.target as HTMLElement).tagName,
+        )
+      )
         return;
       this.player.keys.add(e.key.toLowerCase());
       if (e.key.toLowerCase() === "v") this.controls.toggle();
@@ -282,15 +287,28 @@ export class WorldManager {
       const g = this.visuals.get(i.id)!;
       const complete = s.projects.some((p) => p.id === i.id && p.stage === 7);
       const stage = s.projects.find((p) => p.id === i.id)?.stage ?? -1;
-      const key = `${complete}-${stage}`;
+      const project = s.projects.find((p) => p.id === i.id);
+      const features =
+        project?.proposal?.features ??
+        (project?.tier === 2
+          ? ["clean", "paths", "trees", "flowers", "benches", "lights"]
+          : ["clean", "paths", "flowers", "benches"]);
+      const key = `${complete}-${stage}-${features.join(",")}`;
       if (g.userData.key === key) return;
       g.userData.key = key;
-      while (g.children.length) {
-        const child = g.children[0] as T.Mesh;
-        g.remove(child);
-        child.geometry?.dispose();
-        if (child.material instanceof T.Material) child.material.dispose();
-      }
+      g.traverse((child) => {
+        if (child instanceof T.Mesh) {
+          child.geometry.dispose();
+          const mats = Array.isArray(child.material)
+            ? child.material
+            : [child.material];
+          mats.forEach((mat) => {
+            if (!mat.userData.shared) mat.dispose();
+          });
+        }
+      });
+      g.clear();
+      g.add(createLandscape(i.id, complete, features));
       if (i.id === "park") {
         this.box(-2, 0.4, 0, 0.5, 0.7, 4, complete ? "#eac36b" : "#80776b", g);
         this.box(2, 0.4, 0, 0.5, 0.7, 4, complete ? "#eac36b" : "#80776b", g);
@@ -310,13 +328,25 @@ export class WorldManager {
         this.box(0, 0.05, -2, 8, 0.06, 3, complete ? "#7f9193" : "#76bbce", g);
         if (complete)
           for (let n = -3; n <= 3; n++)
-            this.box(n, 0.1, -2, 0.15, 0.05, 2, "#435b62", g);
+            this.box(n, 0.3, -2, 0.15, 0.05, 2, "#435b62", g);
       } else {
         this.box(0, 0.3, 0, 2, 0.6, 1, complete ? "#88bda4" : "#d68e70", g);
       }
       if (stage === 4) {
-        for (let j = -1; j <= 1; j++)
-          this.box(j * 2, 0.5, 3, 0.5, 1, 0.5, "#eea15d", g);
+        for (let j = -2; j <= 2; j++) {
+          this.box(
+            j * 1.7,
+            0.65,
+            3.3,
+            1.55,
+            0.5,
+            0.12,
+            j % 2 ? "#ead8ac" : "#e9b16c",
+            g,
+          );
+          this.box(j * 1.7, 0.32, 3.3, 0.12, 0.65, 0.12, "#738e86", g);
+        }
+        this.box(3, 0.3, -3, 1.6, 0.6, 1.2, "#d6c4a2", g);
       }
       this.markers.find((m) => m.userData.id === i.id)!.visible = !complete;
     });

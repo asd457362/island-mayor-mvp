@@ -1,3 +1,4 @@
+import { extraCost, extraMaintenance, type CustomProposal } from "./proposals";
 import { citizens, groups, issues, tiers, type Group } from "./data";
 export type Project = {
   id: string;
@@ -8,6 +9,7 @@ export type Project = {
   progress: number;
   eventDone: boolean;
   cost: number;
+  proposal?: CustomProposal;
 };
 export type State = {
   version: 1;
@@ -25,6 +27,7 @@ export type State = {
   maintenance: number;
   discovered: string[];
   promises: Record<string, number>;
+  customProposals?: Record<string, CustomProposal>;
   talked: number[];
   projects: Project[];
   log: string[];
@@ -142,8 +145,8 @@ export class ElectionManager {
     if (s.cp < 40 || s.day < s.nextElection)
       throw Error(`需要 CP 40，且須等到第 ${s.nextElection} 天。`);
     s.cp -= 40;
-    const total = Object.values(s.promises).reduce(
-      (n, t) => n + tiers[t].cost,
+    const total = Object.entries(s.promises).reduce(
+      (n, [id, t]) => n + tiers[t].cost + extraCost(s.customProposals?.[id]),
       0,
     );
     const credibility = total > 140000 ? -9 : total > 110000 ? -3 : 3;
@@ -205,7 +208,12 @@ export class ProjectManager {
     if (s.projects.some((p) => p.id === id)) throw Error("這個議題已有工程。");
     if (workers < 1 || workers > 3) throw Error("每項工程需 1–3 位工程人員。");
     const t = tiers[tier];
-    const cost = Math.round(t.cost + t.material * quality + t.staff * workers);
+    const proposal = s.customProposals?.[id]
+      ? structuredClone(s.customProposals[id])
+      : undefined;
+    const cost = Math.round(
+      t.cost + t.material * quality + t.staff * workers + extraCost(proposal),
+    );
     s.projects.push({
       id,
       tier,
@@ -215,6 +223,7 @@ export class ProjectManager {
       progress: 0,
       eventDone: false,
       cost,
+      ...(proposal ? { proposal } : {}),
     });
   }
   static advance(s: State, id: string) {
@@ -238,7 +247,16 @@ export class ProjectManager {
       p.stage = 7;
       s.xp += p.tier === 2 ? 120 : 80;
       s.credit = clamp(s.credit + 8);
-      s.maintenance += tiers[p.tier].maintenance * (p.quality === 0 ? 2 : 1);
+      s.maintenance +=
+        (tiers[p.tier].maintenance + extraMaintenance(p.proposal)) *
+        (p.quality === 0 ? 2 : 1);
+      if (p.proposal) {
+        s.xp += 20;
+        s.credit = clamp(s.credit + 2);
+        s.log.unshift(
+          `第 ${s.day} 天 · 自行提案已兌現！XP +20、政治信用 +2。居民：這裡變得整齊又舒服了。`,
+        );
+      }
       s.log.unshift(
         `第 ${s.day} 天 · ${issues.find((i) => i.id === id)?.place}完成驗收，XP +${p.tier === 2 ? 120 : 80}`,
       );

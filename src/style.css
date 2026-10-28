@@ -756,3 +756,5 @@ nav .selected {
 .tutorial-reopen {
   margin: 8px 0 20px;
 }
+
+.proposal{background:#f2f2e3;border:1px solid #d7dfc6;padding:16px;border-radius:14px;margin:20px 0}.proposal h3{margin-top:8px}.proposal textarea{font:inherit;font-size:12px;line-height:1.8;width:100%;resize:vertical;border:1px solid #c5d3b8;border-radius:9px;background:#fffdf4;color:#31574d;padding:12px;margin:8px 0;pointer-events:auto;min-height:110px}.proposal small{display:block;line-height:1.8;color:#7b8976;font-size:10px;margin-bottom:10px}.feature-tag{display:inline-block;background:#dfebcf;border-radius:5px;padding:3px 7px;font-size:10px;margin:3px}.feature-check{display:flex;align-items:center;gap:7px;padding:7px 0;font-size:12px}.feature-check span{margin-left:auto;font-size:10px;color:#7c8976}.feature-check input{accent-color:#456e52;width:16px;height:16px}.proposal-review{border-top:1px solid #d1ddc0;margin-top:18px;padding-top:8px}

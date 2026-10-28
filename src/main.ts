@@ -1,3 +1,10 @@
+import {
+  analyzeProposal,
+  confirmProposal,
+  improvements,
+  extraCost,
+  type CustomProposal,
+} from "./proposals";
 import "./style.css";
 import { citizens, issues, tiers, stages, roles } from "./data";
 import {
@@ -37,6 +44,16 @@ let started = false,
 let message = "";
 let citizenId = 0;
 let menu = true;
+let proposalDraft: CustomProposal | null = null;
+const proposalText: Record<string, string> = {};
+const escapeHtml = (text: string) =>
+  text.replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ] || c,
+  );
 const money = (v: number) => "$" + Math.round(v).toLocaleString();
 const s = () => game.state;
 const finished = () => s().projects.filter((p) => p.stage === 7).length;
@@ -57,6 +74,8 @@ function act(fn: () => void) {
 }
 function start(load: boolean) {
   game.state = load ? SaveManager.load() || fresh() : fresh();
+  proposalDraft = null;
+  Object.keys(proposalText).forEach((key) => delete proposalText[key]);
   started = true;
   menu = false;
   tab = "guide";
@@ -67,10 +86,25 @@ function start(load: boolean) {
 }
 const btn = (text: string, action: string, cls = "") =>
   `<button class="${cls}" data-action="${action}">${text}</button>`;
+function proposalPanel() {
+  const saved = s().customProposals?.[selected];
+  const draft = proposalDraft?.issueId === selected ? proposalDraft : null;
+  const built = s().projects.some((p) => p.id === selected);
+  return `<section class="proposal"><div class="eyebrow">YOUR IDEA, YOUR NEIGHBOURHOOD</div><h3>這個地方，你想怎麼改變？</h3><p>用自己的話提案，再確認實際建設清單。完工後，這裡會真的長出你選的設施。</p>${
+    saved
+      ? `<div class="callout"><b>已確認的自行提案</b><p>${escapeHtml(saved.text)}</p>${improvements
+          .filter((f) => saved.features.includes(f.id))
+          .map((f) => `<span class="feature-tag">${f.name}</span>`)
+          .join(
+            "",
+          )}<p>美化追加 ${money(extraCost(saved))} · ${tiers[saved.tier].name}<br>${built ? "已納入工程，完成後永久保留。" : "下方選擇「規劃這項工程」即會納入美化費與設施。更改為制式政見會取代此提案。"}</p></div>`
+      : ""
+  }${built ? "" : `<label for="proposal-text">描述你的想法（8～600 字）</label><textarea id="proposal-text" maxlength="600" rows="4" placeholder="例如：整理公園，鋪平步道、種樹和花，加長椅讓長者休息，晚上設照明。">${escapeHtml(proposalText[selected] ?? saved?.text ?? "")}</textarea><small>目前為免費文字規則整理，沒有呼叫付費 AI。</small>${btn("整理我的提案", "analyze-proposal", "primary")}${draft ? `<div class="proposal-review"><h3>確認會實際建造的項目</h3>${improvements.map((f) => `<label class="feature-check"><input type="checkbox" data-feature="${f.id}" ${draft.features.includes(f.id) ? "checked" : ""}>${f.name}<span>+${money(f.cost)}</span></label>`).join("")}<p>地點：${issues.find((i) => i.id === selected)!.place}（本版提供固定治理地點）</p>${draft.feedback.map((t) => `<p>${t}</p>`).join("")}${draft.warnings.map((t) => `<p class="small">${t}</p>`).join("")}<p>預算依勾選清單與規模計算；確認後會顯示金額，尚未開工不扣款。</p>${btn("確認並列入我的政見", "confirm-proposal", "primary")}</div>` : ""}`}</section>`;
+}
 function issuePanel() {
   const i = issues.find((i) => i.id === selected)!;
   const known = s().discovered.includes(i.id);
-  return `<div class="eyebrow">COMMUNITY FIELD NOTES</div><h2>${i.name}</h2><p class="muted">${i.place} · 關注群體：${i.group}</p><div class="callout">${known ? "調查完成：居民希望改善生活，但也在意施工干擾與公帑運用。" : "前往地標，按「現地調查」收集需求；俯瞰模式可直接選取地標展開現勘。"}</div>${known ? "" : btn("現地調查 +5 CP", "investigate", "primary")}<h3>選擇你的治理承諾</h3>${tiers.map((t, n) => `<article class="option ${s().promises[i.id] === n ? "chosen" : ""}"><div><b>${t.name}</b><span>${money(t.cost)} 基礎預算 · ${t.days} 天</span></div><p>改善 +${t.effect} · 風險 ${t.risk * 100}% · 維護 ${money(t.maintenance)}/天<br>支持：${i.group}；反對：施工周邊商戶／節支選民</p>${btn(s().promises[i.id] === n ? "✓ 已列入政見" : "列入政見", `promise:${n}`)}${s().elected ? btn("規劃這項工程", `plan:${n}`, "primary") : ""}</article>`).join("")}${s().elected ? '<label>工程人力（共 6 位）<select id="workers"><option value="1">1 人 · 節省人事</option><option value="2" selected>2 人 · 工期減半</option><option value="3">3 人 · 工期縮短至 ⅓</option></select></label><label>材料品質<select id="quality"><option value="0">經濟：低初期成本、雙倍維護</option><option value="1" selected>標準：平衡成本</option><option value="2">優質：工期 +20%、初期成本較高</option></select></label>' : ""}<p class="small">實際工程費 = 基礎 + 材料 × 品質係數 + 人事 × 人數。大型工程需上級核准；行政人員 2 位常設協助。</p>`;
+  return `<div class="eyebrow">COMMUNITY FIELD NOTES</div><h2>${i.name}</h2><p class="muted">${i.place} · 關注群體：${i.group}</p><div class="callout">${known ? "調查完成：居民希望改善生活，但也在意施工干擾與公帑運用。" : "前往地標，按「現地調查」收集需求；俯瞰模式可直接選取地標展開現勘。"}</div>${known ? "" : btn("現地調查 +5 CP", "investigate", "primary")}${known ? proposalPanel() : ""}<h3>選擇你的治理承諾</h3>${tiers.map((t, n) => `<article class="option ${s().promises[i.id] === n ? "chosen" : ""}"><div><b>${t.name}</b><span>${money(t.cost)} 基礎預算 · ${t.days} 天</span></div><p>改善 +${t.effect} · 風險 ${t.risk * 100}% · 維護 ${money(t.maintenance)}/天<br>支持：${i.group}；反對：施工周邊商戶／節支選民</p>${btn(s().promises[i.id] === n ? "✓ 已列入政見" : "列入政見", `promise:${n}`)}${s().elected ? btn("規劃這項工程", `plan:${n}`, "primary") : ""}</article>`).join("")}${s().elected ? '<label>工程人力（共 6 位）<select id="workers"><option value="1">1 人 · 節省人事</option><option value="2" selected>2 人 · 工期減半</option><option value="3">3 人 · 工期縮短至 ⅓</option></select></label><label>材料品質<select id="quality"><option value="0">經濟：低初期成本、雙倍維護</option><option value="1" selected>標準：平衡成本</option><option value="2">優質：工期 +20%、初期成本較高</option></select></label>' : ""}<p class="small">實際工程費 = 基礎 + 材料 × 品質係數 + 人事 × 人數。大型工程需上級核准；行政人員 2 位常設協助。</p>`;
 }
 function panel() {
   if (tab === "guide")
@@ -121,7 +155,14 @@ function panel() {
     return `<div class="eyebrow">GOVERNANCE DESK</div><h2>一份承諾，七個步驟。</h2><p class="muted">${s().elected ? "行政人員 2 位 · 行政能力 60 · 工程人員效率 100%" : "居民尚無工程執行權。請先完成競選。"}</p><div class="callout">可用工程人力 ${StaffManager.available(s())}/6 · 可用預算 ${money(s().budget)}</div>${s()
       .projects.map(
         (p) =>
-          `<article class="option"><h3>${issues.find((i) => i.id === p.id)?.name}</h3><p>${tiers[p.tier].name} · ${p.workers} 人 · ${money(p.cost)}</p><div class="stage">${stages.map((x, n) => `<span class="${n <= p.stage ? "active" : ""}">${x}</span>`).join("")}</div><div class="progress"><i style="width:${p.progress * 100}%"></i></div><p>${stages[p.stage]} · ${Math.round(p.progress * 100)}%</p>${p.stage === 4 ? '<p class="small">工程隨時間自動推進；遇重大事件會暫停。</p>' : p.stage < 7 ? btn(["編列並支付預算", "指派工程人員", "申請主管機關核准", "開始施工", "", "辦理驗收", "公布成效，獲得 XP"][p.stage], `advance:${p.id}`, "primary") : '<b class="success">✓ 已改善城市 · 人力釋回</b>'}</article>`,
+          `<article class="option"><h3>${issues.find((i) => i.id === p.id)?.name}</h3><p>${tiers[p.tier].name} · ${p.workers} 人 · ${money(p.cost)}</p>${
+            p.proposal
+              ? `<p>自行提案：${escapeHtml(p.proposal.text)}</p><p>${improvements
+                  .filter((f) => p.proposal!.features.includes(f.id))
+                  .map((f) => f.name)
+                  .join(" · ")}</p>`
+              : ""
+          }<div class="stage">${stages.map((x, n) => `<span class="${n <= p.stage ? "active" : ""}">${x}</span>`).join("")}</div><div class="progress"><i style="width:${p.progress * 100}%"></i></div><p>${stages[p.stage]} · ${Math.round(p.progress * 100)}%</p>${p.stage === 4 ? '<p class="small">工程隨時間自動推進；遇重大事件會暫停。</p>' : p.stage < 7 ? btn(["編列並支付預算", "指派工程人員", "申請主管機關核准", "開始施工", "", "辦理驗收", "公布成效，獲得 XP"][p.stage], `advance:${p.id}`, "primary") : `<b class="success">✓ 已改善城市 · 人力釋回</b>${btn("看看整治後的模樣", `visit:${p.id}`)}`}</article>`,
       )
       .join(
         "",
@@ -190,6 +231,26 @@ function eventModal() {
   const e = s().event!;
   return `<div class="modal-shade"><section class="event"><div class="eyebrow">DECISION NEEDED · 時間已暫停</div><h2>${eventTitles[e.type]}</h2><p>${issues.find((i) => i.id === e.id)?.place}的工程需要你的決定。投入 $3,000 辦理改善、協調或補助提案；也可以不追加支出，以延長工期換取協調時間。</p>${btn("投入 $3,000 · 信用 +3", "event:paid", "primary")}${btn("延長工期 · 進度 −20%、信用 −2", "event:delay")}</section></div>`;
 }
+app.addEventListener("input", (e) => {
+  const el = e.target as HTMLInputElement;
+  if (el.id === "proposal-text") {
+    proposalText[selected] = el.value;
+    if (proposalDraft?.issueId === selected) {
+      proposalDraft = null;
+      const review = app.querySelector(".proposal-review");
+      review?.remove();
+    }
+  }
+});
+app.addEventListener("change", (e) => {
+  const el = e.target as HTMLInputElement;
+  if (el.dataset.feature && proposalDraft?.issueId === selected) {
+    const id = el.dataset.feature;
+    proposalDraft.features = el.checked
+      ? [...new Set([...proposalDraft.features, id])]
+      : proposalDraft.features.filter((f) => f !== id);
+  }
+});
 app.addEventListener("click", (e) => {
   const node = (e.target as HTMLElement).closest<HTMLButtonElement>(
     "[data-action]",
@@ -280,6 +341,15 @@ app.addEventListener("click", (e) => {
     render();
     return;
   }
+  if (a === "visit") {
+    const i = issues.find((i) => i.id === b)!;
+    world.controls.mode = "city";
+    world.controls.target.set(i.x, 0, i.z);
+    world.controls.zoom = 28;
+    tab = "";
+    render();
+    return;
+  }
   if (a === "issue") {
     selected = b;
     tab = "issue";
@@ -313,8 +383,28 @@ app.addEventListener("click", (e) => {
     render();
     return;
   }
+  if (a === "analyze-proposal") {
+    try {
+      proposalDraft = analyzeProposal(
+        proposalText[selected] ?? s().customProposals?.[selected]?.text ?? "",
+        selected,
+      );
+      render();
+    } catch (e) {
+      notify((e as Error).message);
+    }
+    return;
+  }
   act(() => {
     switch (a) {
+      case "confirm-proposal":
+        if (!proposalDraft || proposalDraft.issueId !== selected)
+          throw Error("請先整理你的提案。");
+        confirmProposal(s(), proposalDraft);
+        proposalDraft = null;
+        notify("已加入自行提案；完工時會依確認的清單改變城市。");
+        break;
+
       case "investigate": {
         const i = issues.find((i) => i.id === selected)!;
         if (
@@ -331,6 +421,7 @@ app.addEventListener("click", (e) => {
       }
       case "promise":
         PolicyManager.promise(s(), selected, Number(b));
+        if (s().customProposals) delete s().customProposals![selected];
         break;
       case "talk":
         notify(CitizenManager.talk(s(), Number(b)));
@@ -375,7 +466,12 @@ function interact() {
   render();
 }
 window.addEventListener("keydown", (e) => {
-  if (!started || menu) return;
+  if (
+    !started ||
+    menu ||
+    ["INPUT", "SELECT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)
+  )
+    return;
   if (e.key.toLowerCase() === "e") interact();
   if (e.key.toLowerCase() === "v") render();
 });
