@@ -11,6 +11,8 @@ export type Project = {
 };
 export type State = {
   version: 1;
+  tutorialEnabled?: boolean;
+  tutorialStarted?: boolean;
   day: number;
   elapsed: number;
   elected: boolean;

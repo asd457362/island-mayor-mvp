@@ -14,6 +14,7 @@ import {
   CareerManager,
   EventManager,
 } from "./game";
+import { tutorialStep } from "./tutorial";
 import { WorldManager } from "./world";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 let world: WorldManager;
@@ -133,15 +134,31 @@ function panel() {
   if (tab === "career")
     return `<div class="eyebrow">A CAREER IN PUBLIC SERVICE</div><h2>先做好眼前的小事。</h2><div class="big-stat">${s().xp}<small>永久政治經驗 XP</small></div>${roles.map((r, i) => `<article class="option"><h3>${s().xp >= r.xp ? "◉" : "🔒"} ${r.name} <span class="right">${r.xp} XP</span></h3><p>${i === 0 ? "里長選舉與治理已開放" : s().xp >= r.xp ? "資格門檻已達成；此職位的選舉與治理將於後續版本開放。" : `還需要 ${r.xp - s().xp} XP。資格不等於當選。`}</p></article>`).join("")}<p class="small">完成一項工程 +80～120 XP。敗選保留 XP。MVP 的可玩任期為里長。</p>`;
   if (tab === "settings")
-    return `<div class="eyebrow">SETTINGS</div><h2>照自己的步調。</h2><p>進度每 5 秒自動保存於這台裝置。</p>${btn("立即儲存", "save", "primary")}${btn("回到主選單", "menu")}${btn(world.shadows ? "關閉陰影（提升效能）" : "開啟陰影", "shadows")}<h3>操作方式</h3><p>WASD 移動／平移 · 拖曳旋轉鏡頭<br>Shift + 拖曳平移地圖 · 滾輪縮放<br>E 與附近居民互動 · V 切換視角<br>手機使用左下搖桿，拖動畫面轉向。</p>`;
+    return `<div class="eyebrow">SETTINGS</div><h2>照自己的步調。</h2><p>進度每 5 秒自動保存於這台裝置。</p>${btn("立即儲存", "save", "primary")}${btn("回到主選單", "menu")}${btn(world.shadows ? "關閉陰影（提升效能）" : "開啟陰影", "shadows")}${btn("重新開啟新手教學", "tutorial:restart")}<h3>操作方式</h3><p>WASD 移動／平移 · 拖曳旋轉鏡頭<br>Shift + 拖曳平移地圖 · 滾輪縮放<br>E 與附近居民互動 · V 切換視角<br>手機使用左下搖桿，拖動畫面轉向。</p>`;
   return "";
+}
+function tutorialCard() {
+  if (s().tutorialEnabled === false)
+    return tab === "guide"
+      ? `<div class="tutorial-reopen">${btn("需要指引？開啟新手教學", "tutorial:restart")}</div>`
+      : "";
+  const step = tutorialStep(s());
+  return `<section class="tutorial" aria-label="新手教學"><div class="eyebrow">幸福里小幫手 · 新手教學 <span>${step.progress}%</span></div><h3>${step.title}</h3><p>${step.text}</p><div class="progress"><i style="width:${step.progress}%"></i></div><div class="tutorial-actions">${btn(step.label, "tutorial:next", "primary")}${btn(step.id === "done" ? "完成教學" : "先自由探索", "tutorial:skip")}</div></section>`;
+}
+function highlightTutorial() {
+  if (s().tutorialEnabled === false) return;
+  const target = tutorialStep(s()).target;
+  if (target)
+    app.querySelectorAll<HTMLElement>("[data-action]").forEach((el) => {
+      if (el.dataset.action === target) el.classList.add("tutorial-target");
+    });
 }
 function render() {
   if (menu) {
     app.innerHTML = `<div class="menu-shade"></div><main class="menu"><div class="eyebrow">A LITTLE ISLAND. A BIG RESPONSIBILITY.</div><h1>島民公僕<span>Island Governor</span></h1><p>在曦光島共和國，從一聲問候開始。<br>走進幸福里，讓每個小小的承諾成為改變。</p><div>${btn("開始新的旅程", "new", "primary")}${SaveManager.load() ? btn("繼續上次的故事", "continue") : ""}</div><small>3D 社區治理模擬 · 前端單機 MVP<br>新旅程會取代這台裝置的舊進度</small></main><div class="menu-footer">曦光島共和國 ／ 幸福里 &nbsp; 24 位鄰居，1,200 份期待。</div>`;
     return;
   }
-  app.innerHTML = `<header><div class="brand"><span class="emblem">島</span><div><b>島民公僕</b><small>ISLAND GOVERNOR</small></div></div><div class="location"><span class="live-dot"></span> 曦光島 · 幸福里 <small>第 ${s().day} 天</small></div>${btn("☷", "tab:settings", "icon")}</header><section class="hud"><div><small>目前身分</small><b>${s().elected ? "幸福里 里長" : "社區居民"}</b></div><div><small>地方預算</small><b>${money(s().budget)}</b></div><div><small>民意支持</small><b>${CareerManager.support(s()).toFixed(0)}<em>%</em></b></div><div><small>政治信用</small><b>${s().credit.toFixed(0)}</b></div><div><small>政治 XP / CP</small><b>${s().xp} <em>/ ${s().cp}</em></b></div></section><div class="world-title"><div class="eyebrow">WELCOME TO YOUR NEIGHBOURHOOD</div><h2>幸福里<span>把日子，慢慢變好。</span></h2></div><aside class="map"><div><b>幸福里</b><span>人口 1,200</span></div><svg viewBox="0 0 100 100"><rect width="100" height="100" rx="8" fill="#a6c6a0"/><path d="M50 0V100 M0 50H100" stroke="#f4ebd7" stroke-width="11"/>${issues.map((i) => `<circle cx="${50 + i.x * 1.5}" cy="${50 + i.z * 1.5}" r="4" fill="${i.color}"/>`).join("")}<circle cx="${50 + s().position.x * 1.5}" cy="${50 + s().position.z * 1.5}" r="3" fill="#204f53"/></svg><small>菱形地標 ＝ 地方議題</small></aside><div class="view-tools">${btn(world.controls.mode === "city" ? "↘ 進入街道" : "↗ 城市俯瞰", "view", "primary")}${btn("＋", "zoomIn", "icon")}${btn("−", "zoomOut", "icon")}${world.controls.mode === "walk" ? btn("E · 與附近居民互動", "interact") : ""}</div>${tab ? `<aside class="panel"><button class="close" data-action="close" aria-label="關閉面板">×</button>${panel()}</aside>` : ""}<div class="time"><span>◷ 第 ${s().day} 天</span>${[0, 1, 3, 8].map((n) => btn(n === 0 ? "Ⅱ" : `${n}×`, `speed:${n}`, speed === n ? "chosen" : "")).join("")}<small>${s().event ? "事件待處理" : world.controls.mode === "walk" ? "街道時間 1×" : "城市時間"}</small></div><nav>${[
+  app.innerHTML = `<header><div class="brand"><span class="emblem">島</span><div><b>島民公僕</b><small>ISLAND GOVERNOR</small></div></div><div class="location"><span class="live-dot"></span> 曦光島 · 幸福里 <small>第 ${s().day} 天</small></div>${btn("☷", "tab:settings", "icon")}</header><section class="hud"><div><small>目前身分</small><b>${s().elected ? "幸福里 里長" : "社區居民"}</b></div><div><small>地方預算</small><b>${money(s().budget)}</b></div><div><small>民意支持</small><b>${CareerManager.support(s()).toFixed(0)}<em>%</em></b></div><div><small>政治信用</small><b>${s().credit.toFixed(0)}</b></div><div><small>政治 XP / CP</small><b>${s().xp} <em>/ ${s().cp}</em></b></div></section><div class="world-title"><div class="eyebrow">WELCOME TO YOUR NEIGHBOURHOOD</div><h2>幸福里<span>把日子，慢慢變好。</span></h2></div><aside class="map"><div><b>幸福里</b><span>人口 1,200</span></div><svg viewBox="0 0 100 100"><rect width="100" height="100" rx="8" fill="#a6c6a0"/><path d="M50 0V100 M0 50H100" stroke="#f4ebd7" stroke-width="11"/>${issues.map((i) => `<circle cx="${50 + i.x * 1.5}" cy="${50 + i.z * 1.5}" r="4" fill="${i.color}"/>`).join("")}<circle cx="${50 + s().position.x * 1.5}" cy="${50 + s().position.z * 1.5}" r="3" fill="#204f53"/></svg><small>菱形地標 ＝ 地方議題</small></aside><div class="view-tools">${btn(world.controls.mode === "city" ? "↘ 進入街道" : "↗ 城市俯瞰", "view", "primary")}${btn("＋", "zoomIn", "icon")}${btn("−", "zoomOut", "icon")}${world.controls.mode === "walk" ? btn("E · 與附近居民互動", "interact") : ""}</div>${tab ? `<aside class="panel"><button class="close" data-action="close" aria-label="關閉面板">×</button>${tutorialCard()}${panel()}</aside>` : ""}<div class="time"><span>◷ 第 ${s().day} 天</span>${[0, 1, 3, 8].map((n) => btn(n === 0 ? "Ⅱ" : `${n}×`, `speed:${n}`, speed === n ? "chosen" : "")).join("")}<small>${s().event ? "事件待處理" : world.controls.mode === "walk" ? "街道時間 1×" : "城市時間"}</small></div><nav>${[
     ["guide", "◎", "旅程"],
     ["citizen", "♧", "居民"],
     ["election", "▤", "競選"],
@@ -160,6 +177,7 @@ function render() {
       "",
     )}</nav><div class="controls-hint">WASD 移動 · 拖曳轉向 · V 切換視角 · 點地標調查</div><div id="joystick"><span></span></div>${message && toastTimer > 0 ? `<div class="toast" role="status">${message}</div>` : ""}${s().event ? eventModal() : ""}`;
   setupJoystick();
+  highlightTutorial();
 }
 const eventTitles = [
   "工程延誤：材料尚未到貨",
@@ -184,6 +202,55 @@ app.addEventListener("click", (e) => {
   }
   if (a === "continue") {
     start(true);
+    return;
+  }
+  if (a === "tutorial") {
+    if (b === "skip") {
+      s().tutorialEnabled = false;
+      game.save();
+      render();
+      return;
+    }
+    if (b === "restart") {
+      s().tutorialEnabled = true;
+      s().tutorialStarted = true;
+      tab = "guide";
+      game.save();
+      render();
+      return;
+    }
+    const step = tutorialStep(s());
+    if (step.action === "begin") {
+      s().tutorialStarted = true;
+      game.save();
+      render();
+      return;
+    }
+    const [destination, id] = step.action.split(":");
+    if (destination === "issue") {
+      selected = id;
+      tab = "issue";
+      world.controls.mode = "city";
+      const i = issues.find((i) => i.id === id)!;
+      world.controls.target.set(i.x, 0, i.z);
+    } else if (destination === "citizen") {
+      citizenId = Number(id);
+      tab = "citizen";
+    } else if (destination === "accelerate" || destination === "prepare") {
+      world.controls.mode = "city";
+      speed = 8;
+      tab = destination === "prepare" ? "citizen" : "projects";
+    } else tab = destination;
+    render();
+    const target =
+      step.target &&
+      Array.from(app.querySelectorAll<HTMLElement>("[data-action]")).find(
+        (el) => el.dataset.action === step.target,
+      );
+    if (target) {
+      target.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      target.focus({ preventScroll: true });
+    }
     return;
   }
   if (a === "tab") {
@@ -373,6 +440,17 @@ function frame(now: number) {
       saveTimer = 0;
     }
     if (uiTimer > 1) {
+      const card = app.querySelector(".tutorial");
+      if (card) {
+        const next = tutorialCard();
+        if (card.outerHTML !== next) {
+          card.outerHTML = next;
+          app
+            .querySelectorAll(".tutorial-target")
+            .forEach((el) => el.classList.remove("tutorial-target"));
+          highlightTutorial();
+        }
+      }
       refreshStats();
       uiTimer = 0;
     }

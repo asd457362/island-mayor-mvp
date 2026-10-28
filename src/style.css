@@ -714,3 +714,45 @@ nav .selected {
     font-size: 22px;
   }
 }
+
+.tutorial {
+  background: #eef2df;
+  border: 1px solid #d5dfbd;
+  border-radius: 14px;
+  padding: 16px;
+  margin: 4px 0 24px;
+}
+.tutorial .eyebrow {
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.tutorial .eyebrow span {
+  float: right;
+}
+.tutorial h3 {
+  margin: 10px 0;
+  font-size: 17px;
+  line-height: 1.6;
+}
+.tutorial p {
+  font-size: 12px;
+  line-height: 1.9;
+  margin: 8px 0;
+}
+.tutorial-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.tutorial-actions button {
+  font-size: 11px;
+  padding: 9px 11px;
+}
+.tutorial-target {
+  outline: 3px solid #ddb35c !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px #e6c36d30 !important;
+}
+.tutorial-reopen {
+  margin: 8px 0 20px;
+}
