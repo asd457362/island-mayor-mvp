@@ -1,3 +1,4 @@
+import { initializePark, type ParkItem } from "./park";
 import { extraCost, extraMaintenance, type CustomProposal } from "./proposals";
 import { citizens, groups, issues, tiers, type Group } from "./data";
 export type Project = {
@@ -12,6 +13,8 @@ export type Project = {
   proposal?: CustomProposal;
 };
 export type State = {
+  parkItems?: ParkItem[];
+  parkTutorialSeen?: boolean;
   version: 1;
   tutorialEnabled?: boolean;
   tutorialStarted?: boolean;
@@ -72,6 +75,7 @@ export const fresh = (): State => ({
 const clamp = (v: number) => Math.max(0, Math.min(100, v));
 export class SaveManager {
   static save(s: State) {
+    initializePark(s);
     localStorage.setItem("island-governor-v1", JSON.stringify(s));
   }
   static load(): State | null {
@@ -79,7 +83,9 @@ export class SaveManager {
       const s = JSON.parse(
         localStorage.getItem("island-governor-v1") || "null",
       );
-      return s?.version === 1 && Array.isArray(s.projects) ? s : null;
+      if (s?.version !== 1 || !Array.isArray(s.projects)) return null;
+      initializePark(s);
+      return s;
     } catch {
       return null;
     }

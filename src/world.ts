@@ -1,3 +1,5 @@
+import { initializePark } from "./park";
+import { placedModel } from "./park-models";
 import { createLandscape } from "./landscape";
 import * as T from "three";
 import { citizens, issues } from "./data";
@@ -36,6 +38,9 @@ export class WorldManager {
   ray = new T.Raycaster();
   pointer = new T.Vector2();
   onSelect: (id: string) => void = () => {};
+  editingPark = false;
+  parkGroup = new T.Group();
+  parkKey = "";
   drag = false;
   last = { x: 0, y: 0 };
   distance = 0;
@@ -89,7 +94,12 @@ export class WorldManager {
       const a = i * 2.4;
       const x = Math.cos(a) * 24,
         z = Math.sin(a) * 24;
-      if (Math.abs(x) > 5 && Math.abs(z) > 5) this.tree(x, z);
+      if (
+        Math.abs(x) > 5 &&
+        Math.abs(z) > 5 &&
+        !(Math.abs(x + 14) < 9 && Math.abs(z + 13) < 8)
+      )
+        this.tree(x, z);
     }
     for (let i = 0; i < 5; i++) {
       this.box(9 + i * 2.8, 0.55, -7, 2.2, 0.1, 4, "#d9cfb6");
@@ -122,7 +132,7 @@ export class WorldManager {
       this.scene.add(g);
       this.visuals.set(i.id, g);
       if (index === 0) {
-        this.box(i.x, 0.7, i.z, 7, 0.3, 6, "#d6b48a");
+        this.box(i.x, 0.7, i.z, 7, 0.3, 6, "#d6b48a").userData.parkBase = true;
       }
     });
     this.avatar = this.person("#e8ab5c", true);
@@ -146,6 +156,7 @@ export class WorldManager {
         )
       )
         return;
+      if (this.editingPark) return;
       this.player.keys.add(e.key.toLowerCase());
       if (e.key.toLowerCase() === "v") this.controls.toggle();
     });
@@ -154,12 +165,14 @@ export class WorldManager {
     );
     window.addEventListener("blur", () => this.player.keys.clear());
     canvas.addEventListener("pointerdown", (e) => {
+      if (this.editingPark) return;
       this.drag = true;
       this.distance = 0;
       this.last = { x: e.clientX, y: e.clientY };
       canvas.setPointerCapture(e.pointerId);
     });
     canvas.addEventListener("pointermove", (e) => {
+      if (this.editingPark) return;
       if (!this.drag) return;
       const dx = e.clientX - this.last.x,
         dy = e.clientY - this.last.y;
@@ -179,6 +192,7 @@ export class WorldManager {
       this.last = { x: e.clientX, y: e.clientY };
     });
     canvas.addEventListener("pointerup", (e) => {
+      if (this.editingPark) return;
       this.drag = false;
       if (this.distance > 8) return;
       this.pointer.set(
@@ -193,6 +207,7 @@ export class WorldManager {
       "wheel",
       (e) => {
         e.preventDefault();
+        if (this.editingPark) return;
         this.controls.zoom = T.MathUtils.clamp(
           this.controls.zoom + e.deltaY * 0.04,
           25,
@@ -201,6 +216,7 @@ export class WorldManager {
       },
       { passive: false },
     );
+    this.scene.add(this.parkGroup);
     this.resize();
   }
   box(
@@ -283,6 +299,17 @@ export class WorldManager {
     this.renderer.setSize(innerWidth, innerHeight);
   }
   sync(s: State) {
+    initializePark(s);
+    this.scene.children.forEach((c) => {
+      if (c.userData.parkBase)
+        c.visible = !s.projects.some((p) => p.id === "park" && p.stage === 7);
+    });
+    const parkKey = JSON.stringify(s.parkItems ?? []);
+    if (parkKey !== this.parkKey) {
+      this.parkKey = parkKey;
+      this.parkGroup.clear();
+      for (const p of s.parkItems ?? []) this.parkGroup.add(placedModel(p));
+    }
     issues.forEach((i) => {
       const g = this.visuals.get(i.id)!;
       const complete = s.projects.some((p) => p.id === i.id && p.stage === 7);
@@ -308,13 +335,15 @@ export class WorldManager {
         }
       });
       g.clear();
-      g.add(createLandscape(i.id, complete, features));
-      if (i.id === "park") {
+      g.add(createLandscape(i.id, complete, features, i.id === "park"));
+      if (i.id === "park" && !complete) {
         this.box(-2, 0.4, 0, 0.5, 0.7, 4, complete ? "#eac36b" : "#80776b", g);
         this.box(2, 0.4, 0, 0.5, 0.7, 4, complete ? "#eac36b" : "#80776b", g);
         this.box(0, 2, 0, 5, 0.3, 0.4, complete ? "#ed9d7f" : "#877d6a", g);
         this.box(0, 1, 0, 1.5, 0.2, 1, complete ? "#65babb" : "#9b8974", g);
         if (complete) this.box(3, 0.5, 2, 2, 0.7, 2, "#e4b669", g);
+      } else if (i.id === "park") {
+        // Completed park furniture belongs exclusively to parkGroup.
       } else if (i.id === "light") {
         this.box(0, 2, 0, 0.2, 4, 0.2, "#536b70", g);
         this.box(0, 4, 0, 1.4, 0.3, 0.7, complete ? "#ffdf88" : "#6e7b7b", g);
@@ -355,6 +384,10 @@ export class WorldManager {
     const p = this.player;
     let dx = (p.keys.has("d") ? 1 : 0) - (p.keys.has("a") ? 1 : 0) + p.stick.x,
       dz = (p.keys.has("s") ? 1 : 0) - (p.keys.has("w") ? 1 : 0) + p.stick.y;
+    if (this.editingPark) {
+      dx = 0;
+      dz = 0;
+    }
     const moving = Math.hypot(dx, dz) > 0.1;
     if (this.controls.mode === "walk" && moving) {
       const len = Math.max(1, Math.hypot(dx, dz));

@@ -12,6 +12,7 @@ export function createLandscape(
   id: string,
   complete: boolean,
   features: string[] = [],
+  editable = false,
 ) {
   const g = new T.Group();
   const materials = new Map<string, T.MeshStandardMaterial>();
@@ -115,6 +116,10 @@ export function createLandscape(
     d - 0.35,
     large ? palette.grass : palette.stone,
   );
+  if (large && editable) {
+    batchDetails(g);
+    return g;
+  }
   const has = (f: string) => features.includes(f);
   if (large) {
     box(0, 0.18, 4.8, 15.2, 0.08, 2, palette.stone);

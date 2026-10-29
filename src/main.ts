@@ -1,3 +1,4 @@
+import { createParkEditor } from "./park-editor";
 import {
   analyzeProposal,
   confirmProposal,
@@ -56,6 +57,7 @@ const escapeHtml = (text: string) =>
   );
 const money = (v: number) => "$" + Math.round(v).toLocaleString();
 const s = () => game.state;
+const parkEditor = createParkEditor(world, s, () => game.save());
 const finished = () => s().projects.filter((p) => p.stage === 7).length;
 function notify(text: string) {
   message = text;
@@ -199,7 +201,7 @@ function render() {
     app.innerHTML = `<div class="menu-shade"></div><main class="menu"><div class="eyebrow">A LITTLE ISLAND. A BIG RESPONSIBILITY.</div><h1>島民公僕<span>Island Governor</span></h1><p>在曦光島共和國，從一聲問候開始。<br>走進幸福里，讓每個小小的承諾成為改變。</p><div>${btn("開始新的旅程", "new", "primary")}${SaveManager.load() ? btn("繼續上次的故事", "continue") : ""}</div><small>3D 社區治理模擬 · 前端單機 MVP<br>新旅程會取代這台裝置的舊進度</small></main><div class="menu-footer">曦光島共和國 ／ 幸福里 &nbsp; 24 位鄰居，1,200 份期待。</div>`;
     return;
   }
-  app.innerHTML = `<header><div class="brand"><span class="emblem">島</span><div><b>島民公僕</b><small>ISLAND GOVERNOR</small></div></div><div class="location"><span class="live-dot"></span> 曦光島 · 幸福里 <small>第 ${s().day} 天</small></div>${btn("☷", "tab:settings", "icon")}</header><section class="hud"><div><small>目前身分</small><b>${s().elected ? "幸福里 里長" : "社區居民"}</b></div><div><small>地方預算</small><b>${money(s().budget)}</b></div><div><small>民意支持</small><b>${CareerManager.support(s()).toFixed(0)}<em>%</em></b></div><div><small>政治信用</small><b>${s().credit.toFixed(0)}</b></div><div><small>政治 XP / CP</small><b>${s().xp} <em>/ ${s().cp}</em></b></div></section><div class="world-title"><div class="eyebrow">WELCOME TO YOUR NEIGHBOURHOOD</div><h2>幸福里<span>把日子，慢慢變好。</span></h2></div><aside class="map"><div><b>幸福里</b><span>人口 1,200</span></div><svg viewBox="0 0 100 100"><rect width="100" height="100" rx="8" fill="#a6c6a0"/><path d="M50 0V100 M0 50H100" stroke="#f4ebd7" stroke-width="11"/>${issues.map((i) => `<circle cx="${50 + i.x * 1.5}" cy="${50 + i.z * 1.5}" r="4" fill="${i.color}"/>`).join("")}<circle cx="${50 + s().position.x * 1.5}" cy="${50 + s().position.z * 1.5}" r="3" fill="#204f53"/></svg><small>菱形地標 ＝ 地方議題</small></aside><div class="view-tools">${btn(world.controls.mode === "city" ? "↘ 進入街道" : "↗ 城市俯瞰", "view", "primary")}${btn("＋", "zoomIn", "icon")}${btn("−", "zoomOut", "icon")}${world.controls.mode === "walk" ? btn("E · 與附近居民互動", "interact") : ""}</div>${tab ? `<aside class="panel"><button class="close" data-action="close" aria-label="關閉面板">×</button>${tutorialCard()}${panel()}</aside>` : ""}<div class="time"><span>◷ 第 ${s().day} 天</span>${[0, 1, 3, 8].map((n) => btn(n === 0 ? "Ⅱ" : `${n}×`, `speed:${n}`, speed === n ? "chosen" : "")).join("")}<small>${s().event ? "事件待處理" : world.controls.mode === "walk" ? "街道時間 1×" : "城市時間"}</small></div><nav>${[
+  app.innerHTML = `<header><div class="brand"><span class="emblem">島</span><div><b>島民公僕</b><small>ISLAND GOVERNOR</small></div></div><div class="location"><span class="live-dot"></span> 曦光島 · 幸福里 <small>第 ${s().day} 天</small></div>${btn("☷", "tab:settings", "icon")}</header><section class="hud"><div><small>目前身分</small><b>${s().elected ? "幸福里 里長" : "社區居民"}</b></div><div><small>地方預算</small><b>${money(s().budget)}</b></div><div><small>民意支持</small><b>${CareerManager.support(s()).toFixed(0)}<em>%</em></b></div><div><small>政治信用</small><b>${s().credit.toFixed(0)}</b></div><div><small>政治 XP / CP</small><b>${s().xp} <em>/ ${s().cp}</em></b></div></section><div class="world-title"><div class="eyebrow">WELCOME TO YOUR NEIGHBOURHOOD</div><h2>幸福里<span>把日子，慢慢變好。</span></h2></div><aside class="map"><div><b>幸福里</b><span>人口 1,200</span></div><svg viewBox="0 0 100 100"><rect width="100" height="100" rx="8" fill="#a6c6a0"/><path d="M50 0V100 M0 50H100" stroke="#f4ebd7" stroke-width="11"/>${issues.map((i) => `<circle cx="${50 + i.x * 1.5}" cy="${50 + i.z * 1.5}" r="4" fill="${i.color}"/>`).join("")}<circle cx="${50 + s().position.x * 1.5}" cy="${50 + s().position.z * 1.5}" r="3" fill="#204f53"/></svg><small>菱形地標 ＝ 地方議題</small></aside><div class="view-tools">${btn("♧ 布置公園", "park-edit")}${btn(world.controls.mode === "city" ? "↘ 進入街道" : "↗ 城市俯瞰", "view", "primary")}${btn("＋", "zoomIn", "icon")}${btn("−", "zoomOut", "icon")}${world.controls.mode === "walk" ? btn("E · 與附近居民互動", "interact") : ""}</div>${tab ? `<aside class="panel"><button class="close" data-action="close" aria-label="關閉面板">×</button>${tutorialCard()}${panel()}</aside>` : ""}<div class="time"><span>◷ 第 ${s().day} 天</span>${[0, 1, 3, 8].map((n) => btn(n === 0 ? "Ⅱ" : `${n}×`, `speed:${n}`, speed === n ? "chosen" : "")).join("")}<small>${s().event ? "事件待處理" : world.controls.mode === "walk" ? "街道時間 1×" : "城市時間"}</small></div><nav>${[
     ["guide", "◎", "旅程"],
     ["citizen", "♧", "居民"],
     ["election", "▤", "競選"],
@@ -257,6 +259,15 @@ app.addEventListener("click", (e) => {
   );
   if (!node) return;
   const [a, b] = node.dataset.action!.split(":");
+  if (a === "park-edit") {
+    try {
+      parkEditor.open();
+    } catch (e) {
+      notify((e as Error).message);
+    }
+    return;
+  }
+  if (parkEditor.active) return;
   if (a === "new") {
     start(false);
     return;
@@ -467,6 +478,7 @@ function interact() {
 }
 window.addEventListener("keydown", (e) => {
   if (
+    parkEditor.active ||
     !started ||
     menu ||
     ["INPUT", "SELECT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)
@@ -518,7 +530,8 @@ function frame(now: number) {
       .join(",");
     TimeManager.tick(
       s(),
-      (dt / 12) * (world.controls.mode === "walk" ? 1 : speed),
+      (dt / 12) *
+        (parkEditor.active ? 0 : world.controls.mode === "walk" ? 1 : speed),
     );
     world.sync(s());
     if (

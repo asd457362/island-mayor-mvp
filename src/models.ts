@@ -247,7 +247,7 @@ export function streetDetails() {
   const g = new T.Group();
   // Keep the main crossroad and walking lanes open.
   for (const [x, z] of [
-    [-21, -10],
+    [-23, -10],
     [-8, -20],
     [-22, 18],
   ] as [number, number][]) {
